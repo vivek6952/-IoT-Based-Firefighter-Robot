@@ -1,0 +1,78 @@
+#include <ESP8266WiFi.h>
+
+// Motor Pins
+const int IN1 = 14; // D5
+const int IN2 = 12; // D6
+const int IN3 = 13; // D7
+const int IN4 = 15; // D8
+
+// Sensor & Actuator Pins
+const int flameSensor = 5; // D1
+const int waterPump = 4;   // D2
+const int trigPin = 0;     // D3
+const int echoPin = 2;     // D4
+
+void setup() {
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+  pinMode(flameSensor, INPUT);
+  pinMode(waterPump, OUTPUT);
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  
+  digitalWrite(waterPump, LOW); // Ensure pump is off initially
+  Serial.begin(115200);
+}
+
+long getDistance() {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  long duration = pulseIn(echoPin, HIGH);
+  return duration * 0.034 / 2;
+}
+
+void moveForward() {
+  digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
+  digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
+}
+
+void stopRobot() {
+  digitalWrite(IN1, LOW); digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW); digitalWrite(IN4, LOW);
+}
+
+void turnRight() {
+  digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
+}
+
+void loop() {
+  int fireDetected = digitalRead(flameSensor);
+  long distance = getDistance();
+
+  // Logic 1: Fire Detection (Priority)
+  if (fireDetected == LOW) { // IR sensor outputs LOW when flame is sensed
+    stopRobot();
+    digitalWrite(waterPump, HIGH);
+    Serial.println("FIRE DETECTED! Extinguishing...");
+    delay(2000); 
+  } else {
+    digitalWrite(waterPump, LOW);
+    
+    // Logic 2: Obstacle Avoidance
+    if (distance < 20) {
+      stopRobot();
+      delay(500);
+      turnRight();
+      delay(800);
+    } else {
+      moveForward();
+    }
+  }
+  delay(100);
+}
